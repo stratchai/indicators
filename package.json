@@ -1,0 +1,47 @@
+{
+  "name": "@stratchai/indicators",
+  "version": "0.1.0",
+  "description": "Technical indicators for systematic trading — 37 functions covering trend, momentum, volatility, volume, oscillators, and chart patterns. Zero dependencies, pure functions.",
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [
+    "indicators",
+    "technical-analysis",
+    "trading",
+    "algotrading",
+    "systematic-trading",
+    "bollinger-bands",
+    "macd",
+    "rsi",
+    "adx",
+    "supertrend",
+    "ichimoku",
+    "candle-patterns",
+    "stratchai"
+  ],
+  "author": "brady house",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stratchai/indicators.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stratchai/indicators/issues"
+  },
+  "homepage": "https://github.com/stratchai/indicators#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
