@@ -2,7 +2,7 @@
 
 // Defaults period = 20 and k = 2 match the standard
 // Bollinger settings used in most breakout strategies.
-function calcBollingerBands(prices, period = 20, k = 2) {
+function calcBollingerBands(prices: number[], period: number = 20, k: number = 2) {
   if (prices.length < period) return null;
 
   const slice = prices.slice(-period);
@@ -22,7 +22,7 @@ function calcBollingerBands(prices, period = 20, k = 2) {
 //#region ---------- VOLATILITY INDEXED PRICE ----------
 // VI = SMA(price) - k * std(price)
 
-function calcVolIndex(prices, k = 1) {
+function calcVolIndex(prices: number[], k: number = 1) {
   if (prices.length === 0) return null;
   const n = prices.length;
   const mean = prices.reduce((sum, p) => sum + p, 0) / n;
@@ -35,7 +35,7 @@ function calcVolIndex(prices, k = 1) {
 //#endregion
 //#region ---------- TREND SMA ----------
 
-function calcSMA(prices, period) {
+function calcSMA(prices: number[], period: number) {
   if (prices.length < period) return null;
   const slice = prices.slice(-period);
   return slice.reduce((s, p) => s + p, 0) / slice.length;
@@ -45,7 +45,7 @@ function calcSMA(prices, period) {
 //#region ---------- RSI -----------
 
 // Wilder-style RSI, returns null until enough data
-function calcRSI(prices, period = 14) {
+function calcRSI(prices: number[], period: number = 14) {
   if (!prices || prices.length < period + 1) return null;
 
   // compute gains/losses for last `period` closes
@@ -74,7 +74,7 @@ function calcRSI(prices, period = 14) {
 //#region ---------- ATR -----------
 
 // Average True Range over `period` candles
-function calcATR(highs, lows, closes, period = 14) {
+function calcATR(highs: number[], lows: number[], closes: number[], period: number = 14) {
   if (!highs || !lows || !closes) return null;
   if (highs.length < period + 1 ||
       lows.length < period + 1 ||
@@ -105,7 +105,7 @@ function calcATR(highs, lows, closes, period = 14) {
 //              < 0   means price fell (negative expansion)
 //
 // Used by the spec builder to expose atr.expansion for ATR-breakout entry rules.
-function calcATRExpansion(highs, lows, closes, period = 14) {
+function calcATRExpansion(highs: number[], lows: number[], closes: number[], period: number = 14) {
   const atr = calcATR(highs, lows, closes, period);
   if (atr === null) return null;
 
@@ -122,7 +122,7 @@ function calcATRExpansion(highs, lows, closes, period = 14) {
 
 
 //#endregion
-function _emaSeries(prices, period) {
+function _emaSeries(prices: number[], period: number) {
   if (prices.length < period) return [];
   const k = 2 / (period + 1);
   const out = [];
@@ -135,13 +135,13 @@ function _emaSeries(prices, period) {
   return out;
 }
 
-function calcEMA(prices, period) {
+function calcEMA(prices: number[], period: number) {
   if (!prices || prices.length < period) return null;
   const series = _emaSeries(prices, period);
   return series[series.length - 1];
 }
 
-function calcMACD(prices, fast = 12, slow = 26, signal = 9) {
+function calcMACD(prices: number[], fast: number = 12, slow: number = 26, signal: number = 9) {
   if (!prices || prices.length < slow + signal) return null;
 
   const fastSeries = _emaSeries(prices, fast);
@@ -162,7 +162,7 @@ function calcMACD(prices, fast = 12, slow = 26, signal = 9) {
   return { macd: macdVal, signal: sigEMA, histogram: macdVal - sigEMA };
 }
 
-function calcStochastic(highs, lows, closes, period = 14) {
+function calcStochastic(highs: number[], lows: number[], closes: number[], period: number = 14) {
   if (!highs || highs.length < period) return null;
   const h = highs.slice(-period);
   const l = lows.slice(-period);
@@ -173,7 +173,7 @@ function calcStochastic(highs, lows, closes, period = 14) {
 }
 
 //# region ---------- Trend Structure -------------
-function calcTrendStructure(closes, highs, lows, params = {}) {
+function calcTrendStructure(closes: number[], highs: number[], lows: number[], params: Record<string, any> = {}) {
   const {
     swing_lookback = 20,
     min_swing_distance_pct = 0.5,
@@ -263,7 +263,7 @@ function calcTrendStructure(closes, highs, lows, params = {}) {
 //   - avg flag volume < avg pole volume (drying up during consolidation)
 //   - breakout bar volume > avg flag volume (expansion on breakout)
 //
-function calcFlagPattern(closes, highs, lows, options = {}, volumes = null) {
+function calcFlagPattern(closes: number[], highs: number[], lows: number[], options: Record<string, any> = {}, volumes: number[] | null = null) {
   const poleLen    = options.poleLen    ?? 5;
   const flagLen    = options.flagLen    ?? 4;
   const minPolePct = options.minPolePct ?? 0.4;
@@ -342,7 +342,7 @@ function calcFlagPattern(closes, highs, lows, options = {}, volumes = null) {
 //                        crossed below VWAP (close < vwap). Requires a genuine
 //                        pullback through VWAP, not just proximity from above.
 //   reclaimed          — close >= vwap * (1 - reclaim_tolerance_pct/100)
-function calcVWAP(closes, highs, lows, timestamps, params = {}) {
+function calcVWAP(closes: number[], highs: number[], lows: number[], timestamps: number[], params: Record<string, any> = {}) {
   const {
     vwap_lookback_ms      = 86400000,
     pullback_lookback     = 5,
@@ -417,7 +417,7 @@ function calcVWAP(closes, highs, lows, timestamps, params = {}) {
 //   pattern_range_min_pct — impulse range / avg-prior-range ratio threshold (default 0.8)
 //   confirm_lookback      — candles before impulse used to compute avg range (default 3)
 //   bbMiddle              — BB middle value; confirming candle must close above it (optional)
-function calcCandlePattern(opens, highs, lows, closes, params = {}) {
+function calcCandlePattern(opens: number[], highs: number[], lows: number[], closes: number[], params: Record<string, any> = {}) {
   const {
     pattern_body_min_pct  = 0.5,
     pattern_range_min_pct = 0.8,
@@ -468,7 +468,7 @@ function calcCandlePattern(opens, highs, lows, closes, params = {}) {
 //
 // Returns: { isHammer, lowerWickPct, bodyPct }
 //
-function calcHammer(opens, highs, lows, closes, params = {}) {
+function calcHammer(opens: number[], highs: number[], lows: number[], closes: number[], params: Record<string, any> = {}) {
   const wickRatio    = params.wick_ratio     ?? 2.0;
   const upperWickMax = params.upper_wick_max ?? 0.15;
   const bodyTopPct   = params.body_top_pct   ?? 0.35;
@@ -518,7 +518,7 @@ function calcHammer(opens, highs, lows, closes, params = {}) {
 //
 // Returns: { isBullishEngulfing, priorClose }
 //
-function calcEngulfing(opens, highs, lows, closes, params = {}) {
+function calcEngulfing(opens: number[], highs: number[], lows: number[], closes: number[], params: Record<string, any> = {}) {
   const minBodyPct     = params.min_body_pct      ?? 0.3;
   const minEngulfRatio = params.min_engulf_ratio  ?? 1.0;
 
@@ -565,7 +565,7 @@ function calcEngulfing(opens, highs, lows, closes, params = {}) {
 //
 // Returns: { isMorningStar }
 //
-function calcMorningStar(opens, highs, lows, closes, params = {}) {
+function calcMorningStar(opens: number[], highs: number[], lows: number[], closes: number[], params: Record<string, any> = {}) {
   const firstBodyMinPct     = params.first_body_min_pct     ?? 0.5;
   const starBodyMaxPct      = params.star_body_max_pct      ?? 0.3;
   const thirdBodyMinPct     = params.third_body_min_pct     ?? 0.4;
@@ -620,7 +620,7 @@ function calcMorningStar(opens, highs, lows, closes, params = {}) {
 //
 // Returns: { isDoubleBottom, neckline }
 //
-function calcCupAndHandle(closes, highs, lows, params = {}) {
+function calcCupAndHandle(closes: number[], highs: number[], lows: number[], params: Record<string, any> = {}) {
   const cupLenMin         = params.cup_len_min             ?? 20;
   const cupLenMax         = params.cup_len_max             ?? 80;
   const handleLen         = params.handle_len              ?? 5;
@@ -694,7 +694,7 @@ function calcCupAndHandle(closes, highs, lows, params = {}) {
   return { isCupAndHandle, pivot };
 }
 
-function calcDoubleBottom(closes, highs, lows, params = {}) {
+function calcDoubleBottom(closes: number[], highs: number[], lows: number[], params: Record<string, any> = {}) {
   const swingLookback      = params.swing_lookback         ?? 5;
   const troughTolerancePct = params.trough_tolerance_pct   ?? 4;
   const minTroughSep       = params.min_trough_separation  ?? 10;
@@ -747,7 +747,7 @@ function calcDoubleBottom(closes, highs, lows, params = {}) {
 // falls back below 26.5 — range expanding then contracting.
 //
 // Returns: { value } or null when insufficient data.
-function calcMassIndex(highs, lows, period = 9, sumPeriod = 25, bulgeLookback = 10) {
+function calcMassIndex(highs: number[], lows: number[], period: number = 9, sumPeriod: number = 25, bulgeLookback: number = 10) {
   if (!highs || !lows) return null;
   const minLen = period * 2 + sumPeriod;
   if (highs.length < minLen || lows.length < minLen) return null;
@@ -798,7 +798,7 @@ function calcMassIndex(highs, lows, period = 9, sumPeriod = 25, bulgeLookback = 
 //
 // Returns: { up, down, oscillator } (all 0–100; oscillator −100 to +100),
 // or null when insufficient data.
-function calcAroon(highs, lows, period = 25) {
+function calcAroon(highs: number[], lows: number[], period: number = 25) {
   if (!highs || !lows) return null;
   if (highs.length < period + 1 || lows.length < period + 1) return null;
 
@@ -837,7 +837,7 @@ function calcAroon(highs, lows, period = 25) {
  * @param {number}   period  default 14
  * @returns {{ value: number, diPlus: number, diMinus: number } | null}
  */
-function calcADX(highs, lows, closes, period = 14) {
+function calcADX(highs: number[], lows: number[], closes: number[], period: number = 14) {
   if (!highs || !lows || !closes) return null;
   const minLen = period * 2 + 1;
   if (highs.length < minLen || lows.length < minLen || closes.length < minLen) return null;
@@ -918,7 +918,7 @@ function calcADX(highs, lows, closes, period = 14) {
  * @param {number}   multiplier  ATR multiplier, default 3.0
  * @returns {{ value: number, bullish: boolean, bearish: boolean, distance: number } | null}
  */
-function calcSupertrend(highs, lows, closes, period = 10, multiplier = 3.0) {
+function calcSupertrend(highs: number[], lows: number[], closes: number[], period: number = 10, multiplier: number = 3.0) {
   if (!highs || !lows || !closes) return null;
   if (closes.length < period + 1) return null;
 
@@ -991,7 +991,7 @@ function calcSupertrend(highs, lows, closes, period = 10, multiplier = 3.0) {
  *   rising   — true when OBV > SMA(OBV, smaPeriod)  (volume confirming)
  *   smaRatio — OBV / SMA(OBV); > 1 = above average, < 1 = below average
  */
-function calcOBV(closes, volumes, smaPeriod = 20) {
+function calcOBV(closes: number[], volumes: number[], smaPeriod: number = 20) {
   if (!closes || !volumes) return null;
   if (closes.length < 2 || volumes.length < 2) return null;
   if (closes.length !== volumes.length) return null;
@@ -1041,7 +1041,7 @@ function calcOBV(closes, volumes, smaPeriod = 20) {
  * @param {number}   afMax    acceleration factor ceiling, default 0.2
  * @returns {{ value: number, bullish: boolean, bearish: boolean } | null}
  */
-function calcParabolicSAR(highs, lows, closes, afStep = 0.02, afMax = 0.2) {
+function calcParabolicSAR(highs: number[], lows: number[], closes: number[], afStep: number = 0.02, afMax: number = 0.2) {
   if (!highs || !lows || !closes) return null;
   if (closes.length < 2) return null;
 
@@ -1128,12 +1128,12 @@ function calcParabolicSAR(highs, lows, closes, afStep = 0.02, afMax = 0.2) {
  * @returns {{ jaw: number, teeth: number, lips: number,
  *             bullish: boolean, bearish: boolean, sleeping: boolean } | null}
  */
-function calcAlligator(prices, jawPeriod = 13, teethPeriod = 8, lipsPeriod = 5) {
+function calcAlligator(prices: number[], jawPeriod: number = 13, teethPeriod: number = 8, lipsPeriod: number = 5) {
   if (!prices) return null;
   if (prices.length < jawPeriod + 1) return null;
 
   // Build Wilder-smoothed (SMMA) value from a SMA seed over `period` bars
-  function smma(period) {
+  function smma(period: number): number | null {
     if (prices.length < period) return null;
     let val = prices.slice(0, period).reduce((s, p) => s + p, 0) / period;
     for (let i = period; i < prices.length; i++) {
@@ -1179,15 +1179,15 @@ function calcAlligator(prices, jawPeriod = 13, teethPeriod = 8, lipsPeriod = 5) 
  * @returns {{ value: number, positive: boolean, negative: boolean,
  *             rising: boolean, falling: boolean } | null}
  */
-function calcAwesomeOscillator(highs, lows, fastPeriod = 5, slowPeriod = 34) {
+function calcAwesomeOscillator(highs: number[], lows: number[], fastPeriod: number = 5, slowPeriod: number = 34) {
   if (!highs || !lows) return null;
   if (highs.length < slowPeriod + 1 || lows.length < slowPeriod + 1) return null;
 
   const midpoints = highs.map((h, i) => (h + lows[i]) / 2);
 
-  function sma(arr, period, offset = 0) {
+  function sma(arr: number[], period: number, offset: number = 0): number {
     const slice = arr.slice(arr.length - period - offset, arr.length - offset);
-    return slice.reduce((s, v) => s + v, 0) / period;
+    return slice.reduce((s: number, v: number) => s + v, 0) / period;
   }
 
   const fastNow  = sma(midpoints, fastPeriod, 0);
@@ -1224,7 +1224,7 @@ function calcAwesomeOscillator(highs, lows, fastPeriod = 5, slowPeriod = 34) {
  * @returns {{ value: number, positive: boolean, negative: boolean,
  *             accelerating: boolean, decelerating: boolean } | null}
  */
-function calcROC(prices, period = 14) {
+function calcROC(prices: number[], period: number = 14) {
   if (!prices || prices.length < period + 2) return null;
 
   const current  = prices[prices.length - 1];
@@ -1271,7 +1271,7 @@ function calcROC(prices, period = 14) {
  * @returns {{ upper: number, middle: number, lower: number,
  *             priceAbove: boolean, priceBelow: boolean } | null}
  */
-function calcKeltner(highs, lows, closes, period = 20, multiplier = 1.5, atrPeriod = 14) {
+function calcKeltner(highs: number[], lows: number[], closes: number[], period: number = 20, multiplier: number = 1.5, atrPeriod: number = 14) {
   if (!highs || !lows || !closes) return null;
   const minLen = Math.max(period, atrPeriod) + 1;
   if (closes.length < minLen) return null;
@@ -1313,7 +1313,7 @@ function calcKeltner(highs, lows, closes, period = 20, multiplier = 1.5, atrPeri
  * @param {number}   period  default 14
  * @returns {{ value: number, overbought: boolean, oversold: boolean } | null}
  */
-function calcMFI(highs, lows, closes, volumes, period = 14) {
+function calcMFI(highs: number[], lows: number[], closes: number[], volumes: number[], period: number = 14) {
   if (!highs || !lows || !closes || !volumes) return null;
   if (closes.length < period + 1 || volumes.length < period + 1) return null;
 
@@ -1358,7 +1358,7 @@ function calcMFI(highs, lows, closes, volumes, period = 14) {
  * @param {number}   period  default 20
  * @returns {{ value: number, bullish: boolean, bearish: boolean } | null}
  */
-function calcCMF(highs, lows, closes, volumes, period = 20) {
+function calcCMF(highs: number[], lows: number[], closes: number[], volumes: number[], period: number = 20) {
   if (!highs || !lows || !closes || !volumes) return null;
   if (closes.length < period || volumes.length < period) return null;
 
@@ -1402,7 +1402,7 @@ function calcCMF(highs, lows, closes, volumes, period = 20) {
  * @returns {{ upper: number, middle: number, lower: number,
  *             priceAbove: boolean, priceBelow: boolean } | null}
  */
-function calcDonchian(highs, lows, closes, period = 20) {
+function calcDonchian(highs: number[], lows: number[], closes: number[], period: number = 20) {
   if (!highs || !lows || !closes) return null;
   // Need period prior bars + current bar for breakout detection
   if (closes.length < period + 1) return null;
@@ -1439,23 +1439,23 @@ function calcDonchian(highs, lows, closes, period = 20) {
  * @param {number}   period  default 20
  * @returns {{ value: number, rising: boolean, falling: boolean } | null}
  */
-function calcHMA(prices, period = 20) {
+function calcHMA(prices: number[], period: number = 20) {
   if (!prices) return null;
   const sqrtPeriod = Math.round(Math.sqrt(period));
   if (prices.length < period + sqrtPeriod) return null;
 
-  function wma(arr, len) {
+  function wma(arr: number[], len: number): number | null {
     if (arr.length < len) return null;
     const slice = arr.slice(-len);
     const denom = (len * (len + 1)) / 2;
-    const val = slice.reduce((s, p, i) => s + p * (i + 1), 0) / denom;
+    const val = slice.reduce((s: number, p: number, i: number) => s + p * (i + 1), 0) / denom;
     return val;
   }
 
   // Need two consecutive HMA values to determine direction
   const halfPeriod = Math.round(period / 2);
 
-  function hmaAt(arr) {
+  function hmaAt(arr: number[]): number | null {
     const wmaFull = wma(arr, period);
     const wmaHalf = wma(arr, halfPeriod);
     if (wmaFull == null || wmaHalf == null) return null;
@@ -1497,7 +1497,7 @@ function calcHMA(prices, period = 20) {
  * @returns {{ high52: number, low52: number, pctFromHigh: number,
  *             pctFromLow: number, nearHigh: boolean, nearLow: boolean } | null}
  */
-function calc52WeekHighLow(closes, nearPct = 5) {
+function calc52WeekHighLow(closes: number[], nearPct: number = 5) {
   if (!closes || closes.length < 2) return null;
   const window = closes.slice(-252);
   const high52 = Math.max(...window);
@@ -1536,7 +1536,7 @@ function calc52WeekHighLow(closes, nearPct = 5) {
  * @returns {{ pivot: number, r1: number, r2: number, s1: number, s2: number,
  *             abovePivot: boolean, belowPivot: boolean } | null}
  */
-function calcPivotPoints(highs, lows, closes) {
+function calcPivotPoints(highs: number[], lows: number[], closes: number[]) {
   if (!highs || !lows || !closes) return null;
   if (closes.length < 2) return null;
 
@@ -1585,7 +1585,7 @@ function calcPivotPoints(highs, lows, closes) {
  *             level618: number, level786: number,
  *             nearLevel: boolean } | null}
  */
-function calcFibonacci(highs, lows, closes, period = 50, nearPct = 2) {
+function calcFibonacci(highs: number[], lows: number[], closes: number[], period: number = 50, nearPct: number = 2) {
   if (!highs || !lows || !closes) return null;
   if (closes.length < period + 1) return null;
 
@@ -1637,13 +1637,12 @@ function calcFibonacci(highs, lows, closes, period = 50, nearPct = 2) {
  *             aboveCloud, belowCloud, inCloud, cloudBullish,
  *             tkBullish, tkBearish, chikouConfirm } | null}
  */
-function calcIchimoku(highs, lows, closes,
-  tenkanPeriod = 9, kijunPeriod = 26, senkouBPeriod = 52, displacement = 26) {
+function calcIchimoku(highs: number[], lows: number[], closes: number[], tenkanPeriod: number = 9, kijunPeriod: number = 26, senkouBPeriod: number = 52, displacement: number = 26) {
   if (!highs || !lows || !closes) return null;
   const minLen = senkouBPeriod + displacement;
   if (closes.length < minLen) return null;
 
-  function midpoint(h, l, period, offset = 0) {
+  function midpoint(h: number[], l: number[], period: number, offset: number = 0): number | null {
     const idx = closes.length - 1 - offset;
     if (idx - period + 1 < 0) return null;
     const sliceH = h.slice(idx - period + 1, idx + 1);
@@ -1701,7 +1700,7 @@ function calcIchimoku(highs, lows, closes,
  *
  * Returns { isAscendingTriangle, resistance, lowestLow, target, breakoutVolConfirmed }
  */
-function calcAscendingTriangle(highs, lows, closes, volumes, params = {}) {
+function calcAscendingTriangle(highs: number[], lows: number[], closes: number[], volumes: number[] | null, params: Record<string, any> = {}) {
   const lookback              = params.lookback                ?? 40;
   const resistanceTolPct      = params.resistance_tolerance_pct ?? 1.5;
   const minResistanceTouches  = params.min_resistance_touches   ?? 2;
@@ -1767,7 +1766,7 @@ function calcAscendingTriangle(highs, lows, closes, volumes, params = {}) {
 }
 //#endregion
 
-module.exports = {
+export {
   calcVolIndex,
   calcBollingerBands,
   calcSMA,

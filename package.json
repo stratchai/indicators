@@ -1,17 +1,25 @@
 {
   "name": "@stratchai/indicators",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Technical indicators for systematic trading — 37 functions covering trend, momentum, volatility, volume, oscillators, and chart patterns. Zero dependencies, pure functions.",
-  "main": "src/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
-    "src",
+    "dist",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build && npm test",
     "test": "jest",
     "test:watch": "jest --watch"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.[jt]s"]
   },
   "keywords": [
     "indicators",
@@ -42,6 +50,10 @@
     "node": ">=16.0.0"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.41",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.11",
+    "typescript": "^5.9.3"
   }
 }

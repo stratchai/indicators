@@ -12,31 +12,42 @@ npm install @stratchai/indicators
 
 ## Quick start
 
-```js
-const {
+### TypeScript
+
+```ts
+import {
   calcBollingerBands,
   calcRSI,
   calcADX,
   calcSupertrend,
   calcMACD,
-} = require("@stratchai/indicators");
+} from "@stratchai/indicators";
 
-const closes = [/* ... daily closes ... */];
-const highs  = [/* ... daily highs  ... */];
-const lows   = [/* ... daily lows   ... */];
+const closes: number[] = [/* ... daily closes ... */];
+const highs:  number[] = [/* ... daily highs  ... */];
+const lows:   number[] = [/* ... daily lows   ... */];
 
 const bb = calcBollingerBands(closes, 20, 2);
-// → { middle: 100.4, upper: 110.8, lower: 90.0 }
+// Inferred: { middle: number; upper: number; lower: number; std: number } | null
 
 const rsi = calcRSI(closes, 14);
-// → 62.7
+// Inferred: number | null
 
 const adx = calcADX(highs, lows, closes, 14);
-// → { value: 32.1, diPlus: 27.4, diMinus: 14.2 }
-
-const st = calcSupertrend(highs, lows, closes, 10, 3.0);
-// → { value: 98.2, direction: "up", bullish: true }
+// Inferred: { value, diPlus, diMinus, trending, bullish, ... } | null
 ```
+
+### JavaScript (CommonJS)
+
+```js
+const { calcBollingerBands, calcRSI, calcADX } = require("@stratchai/indicators");
+
+const bb  = calcBollingerBands(closes, 20, 2);
+const rsi = calcRSI(closes, 14);
+const adx = calcADX(highs, lows, closes, 14);
+```
+
+Every function is typed — your IDE autocompletes the parameter list, infers the return shape, and surfaces the `| null` cases at the point of use.
 
 ## Available indicators
 
