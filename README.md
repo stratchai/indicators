@@ -2,7 +2,7 @@
 
 Technical indicators for systematic trading. 37 functions covering trend, momentum, volatility, volume, oscillators, and chart patterns. Zero dependencies, pure functions, written in plain JS.
 
-Extracted from the production [stratchai](https://github.com/stratchai) trading framework, where these indicators back a multi-strategy live fleet.
+Battle-tested in a production multi-strategy trading framework where these indicators run a live fleet across crypto and equities.
 
 ## Install
 
@@ -112,10 +112,10 @@ Every function is typed — your IDE autocompletes the parameter list, infers th
 
 Most existing JS indicator libraries are either old/unmaintained, thin C bindings with platform pain, or return raw numbers without the richer context strategies actually need (`{ value, bullish, expansion }`-shaped returns instead of just a number). Several useful patterns — Cup & Handle, Flag, Ascending Triangle, Morning Star — are missing from most libraries entirely.
 
-This library exists because the [@stratchai](https://github.com/stratchai) framework needed indicators with:
-- Boolean conveniences (`adx.trending`, `supertrend.bullish`, `band.aboveUpper`)
-- Pattern detectors that match technical-analysis literature (Bulkowski, Wilder, Bollinger)
-- No external dependencies — works in any Node.js environment, no native compilation
+This library was built to fill three specific gaps:
+- **Boolean conveniences** (`adx.trending`, `supertrend.bullish`, `band.aboveUpper`) — most libraries return raw numbers, leaving the threshold logic to every consumer
+- **Pattern detectors** that match technical-analysis literature (Bulkowski, Wilder, Bollinger) — Cup & Handle, Flag, Ascending Triangle, Morning Star
+- **No external dependencies** — works in any Node.js environment, no native compilation, no C bindings
 
 ## License
 

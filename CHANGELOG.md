@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.1] — 2026-06-02 (README — drop links to private framework)
+
+### Fixed
+
+- **README references to private parent project removed.** The two `https://github.com/stratchai` links (in the intro paragraph and the "Why another indicator library?" section) implied a public parent repo that doesn't exist publicly. Rephrased to describe the library's pedigree without naming or linking to the private framework. The "battle-tested in production" claim stays — just without the dead-end link.
+
+No code changes. README-only release.
+
+---
+
 ## [0.2.0] — 2026-05-31 (TypeScript port)
 
 ### Changed
@@ -35,7 +45,7 @@
 
 ## [0.1.0] — 2026-05-30 (initial extraction)
 
-Extracted from [@stratchai/core](https://github.com/stratchai/core) — the indicator module is the largest piece of `core` with the cleanest extraction surface (pure functions, zero external imports, fully tested standalone).
+Extracted from a parent trading framework — the indicator module was the largest piece with the cleanest extraction surface (pure functions, zero external imports, fully tested standalone).
 
 ### Included
 
@@ -43,4 +53,4 @@ Extracted from [@stratchai/core](https://github.com/stratchai/core) — the indi
 
 ### Tests
 
-177 tests, 100% pass standalone. Lifted directly from `core/tests/indicators.test.js` (the tests were already self-contained and required only an import path change).
+177 tests, 100% pass standalone. Lifted from the parent framework's test suite (the tests were already self-contained and required only an import path change).
