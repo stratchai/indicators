@@ -1,8 +1,28 @@
 # @stratchai/indicators
 
-Technical indicators for systematic trading. 37 functions covering trend, momentum, volatility, volume, oscillators, and chart patterns. Zero dependencies, pure functions, written in plain JS.
+[![npm version](https://img.shields.io/npm/v/@stratchai/indicators.svg)](https://www.npmjs.com/package/@stratchai/indicators)
+[![npm downloads](https://img.shields.io/npm/dm/@stratchai/indicators.svg)](https://www.npmjs.com/package/@stratchai/indicators)
+[![types](https://img.shields.io/npm/types/@stratchai/indicators.svg)](https://www.typescriptlang.org)
+[![license](https://img.shields.io/npm/l/@stratchai/indicators.svg)](./LICENSE)
+[![node](https://img.shields.io/node/v/@stratchai/indicators.svg)](https://nodejs.org)
 
-Battle-tested in a production multi-strategy trading framework where these indicators run a live fleet across crypto and equities.
+**37 technical indicators + 12 series variants for systematic trading.** Trend, momentum, volatility, volume, oscillators, chart patterns — zero runtime dependencies, pure functions, TypeScript-typed.
+
+```ts
+import { calcRSI, calcMACD, calcSupertrend, calcBollingerBands } from "@stratchai/indicators";
+
+const rsi = calcRSI(closes, 14);
+// number | null
+
+const macd = calcMACD(closes, 12, 26, 9);
+// { macd, signal, histogram, bullish, bearish, ... } | null
+
+const st = calcSupertrend(highs, lows, closes, 10, 3);
+// { value, bullish, bearish, distance } | null
+
+const bb = calcBollingerBands(closes, 20, 2);
+// { middle, upper, lower, std, width, ... } | null
+```
 
 ## Install
 
@@ -10,44 +30,57 @@ Battle-tested in a production multi-strategy trading framework where these indic
 npm install @stratchai/indicators
 ```
 
-## Quick start
+Works in any Node 16+ environment. No native compilation, no C bindings, no external runtime dependencies.
 
-### TypeScript
+## Stratchai ecosystem
+
+`@stratchai/indicators` is the foundation that the other two packages build on:
+
+| Package | Purpose |
+|---|---|
+| **`@stratchai/indicators`** | **37 indicators + 12 series variants (this package)** |
+| [`@stratchai/strategy-spec`](https://www.npmjs.com/package/@stratchai/strategy-spec) | Declarative strategy specs → generated JavaScript |
+| [`@stratchai/backtest`](https://www.npmjs.com/package/@stratchai/backtest) | Walk-forward audit primitives for OOS validation |
+
+Use `@stratchai/indicators` alone for any kind of signal/research code, or together with the other two for a full spec-build-audit loop.
+
+## Two APIs: scalar vs series
+
+Each indicator comes in two flavors, optimized for different use cases:
+
+### Scalar (latest-value)
+
+Returns one result from a trailing prefix. Use in live agents that call once per bar with the latest data.
 
 ```ts
-import {
-  calcBollingerBands,
-  calcRSI,
-  calcADX,
-  calcSupertrend,
-  calcMACD,
-} from "@stratchai/indicators";
-
-const closes: number[] = [/* ... daily closes ... */];
-const highs:  number[] = [/* ... daily highs  ... */];
-const lows:   number[] = [/* ... daily lows   ... */];
-
-const bb = calcBollingerBands(closes, 20, 2);
-// Inferred: { middle: number; upper: number; lower: number; std: number } | null
+import { calcRSI } from "@stratchai/indicators";
 
 const rsi = calcRSI(closes, 14);
-// Inferred: number | null
-
-const adx = calcADX(highs, lows, closes, 14);
-// Inferred: { value, diPlus, diMinus, trending, bullish, ... } | null
+// number | null  — RSI computed at the END of the input array
 ```
 
-### JavaScript (CommonJS)
+### Series (one-per-bar)
 
-```js
-const { calcBollingerBands, calcRSI, calcADX } = require("@stratchai/indicators");
+Returns an array of length `closes.length` with the indicator computed at every bar. Use in backtests, charts, or anywhere you need per-bar values.
 
-const bb  = calcBollingerBands(closes, 20, 2);
-const rsi = calcRSI(closes, 14);
-const adx = calcADX(highs, lows, closes, 14);
+```ts
+import { calcRSISeries } from "@stratchai/indicators";
+
+const rsi = calcRSISeries(closes, 14);
+// (number | null)[]  — same length as closes; null for the first 14 warmup bars
+
+for (let i = 14; i < closes.length; i++) {
+  if (rsi[i] !== null && rsi[i] < 30) {
+    /* oversold signal at bar i */
+  }
+}
 ```
 
-Every function is typed — your IDE autocompletes the parameter list, infers the return shape, and surfaces the `| null` cases at the point of use.
+Series variants ship for the indicators most commonly used in backtests:
+`calcRSISeries`, `calcSMASeries`, `calcEMASeries`, `calcMFISeries`,
+`calcAroonSeries`, `calcADXSeries`, `calcSupertrendSeries`,
+`calcIchimokuSeries`, `calcKeltnerSeries`, `calcOBVSeries`,
+`calcBollingerBandsSeries`, `calcMACDSeries`.
 
 ## Available indicators
 
@@ -102,21 +135,22 @@ Every function is typed — your IDE autocompletes the parameter list, infers th
 
 ## Conventions
 
-**Array order.** All inputs are arrays in chronological order — oldest at index 0, most recent at the end. The function reads the most recent values (e.g., `prices[prices.length - 1]` is the current bar's close).
+**Array order.** All inputs are arrays in chronological order — oldest at index 0, most recent at the end. Scalar functions read the most recent values (e.g., `prices[prices.length - 1]` is the current bar).
 
-**Return shape.** Most indicators return `null` when there aren't enough bars to compute (e.g., `calcRSI(prices, 14)` returns `null` when `prices.length < 15`). Composite indicators return objects with named fields (`{ value, bullish, expansion, ... }`) — see jsdoc or just `console.log` the return.
+**Return shape.** Most indicators return `null` when there aren't enough bars to compute (e.g., `calcRSI(prices, 14)` returns `null` when `prices.length < 15`). Composite indicators return objects with named fields (`{ value, bullish, expansion, ... }`) — see TypeScript types or jsdoc.
 
-**No I/O.** Every function is pure: given the same inputs, returns the same output. No filesystem, no network, no time dependency. Easy to test, easy to compose.
+**No I/O.** Every function is pure: same inputs → same output. No filesystem, no network, no time dependency. Easy to test, easy to compose.
 
-## Why another indicator library?
+## Why this library?
 
-Most existing JS indicator libraries are either old/unmaintained, thin C bindings with platform pain, or return raw numbers without the richer context strategies actually need (`{ value, bullish, expansion }`-shaped returns instead of just a number). Several useful patterns — Cup & Handle, Flag, Ascending Triangle, Morning Star — are missing from most libraries entirely.
+Most JavaScript indicator libraries are either old and unmaintained, thin C bindings with platform pain, or return raw numbers without the richer context strategies actually need. Useful patterns — Cup & Handle, Flag, Ascending Triangle, Morning Star — are missing from most libraries entirely.
 
 This library was built to fill three specific gaps:
-- **Boolean conveniences** (`adx.trending`, `supertrend.bullish`, `band.aboveUpper`) — most libraries return raw numbers, leaving the threshold logic to every consumer
-- **Pattern detectors** that match technical-analysis literature (Bulkowski, Wilder, Bollinger) — Cup & Handle, Flag, Ascending Triangle, Morning Star
+
+- **Boolean conveniences** (`adx.trending`, `supertrend.bullish`, `band.aboveUpper`) — most libraries return raw numbers, leaving threshold logic to every consumer
+- **Pattern detectors** following technical-analysis literature (Bulkowski, Wilder, Bollinger) — Cup & Handle, Flag, Ascending Triangle, Morning Star
 - **No external dependencies** — works in any Node.js environment, no native compilation, no C bindings
 
 ## License
 
-MIT
+[MIT](./LICENSE)
