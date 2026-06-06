@@ -1856,10 +1856,33 @@ function calcSupertrendSeries(highs: number[], lows: number[], closes: number[],
 }
 
 function calcIchimokuSeries(highs: number[], lows: number[], closes: number[], params: any = {}): (any)[] {
+  // v0.3.1: fix two bugs from v0.3.0:
+  //   1. params was passed as the 4th positional arg to scalar calcIchimoku,
+  //      which expects (highs, lows, closes, tenkanPeriod, kijunPeriod,
+  //      senkouBPeriod, displacement). Passing {} corrupted tenkanPeriod
+  //      → idx - {} → NaN → silently broken indicator output.
+  //   2. warmup started at senkouB (52) but scalar needs senkouB + displacement
+  //      (78) for a non-null return.
+  // Accepts both camelCase and snake_case key names since the audit scripts
+  // use snake_case (matching the strategy spec convention) but the scalar
+  // uses camelCase positional args.
+  const tenkanPeriod   = params.tenkanPeriod   ?? params.tenkan_period   ?? 9;
+  const kijunPeriod    = params.kijunPeriod    ?? params.kijun_period    ?? 26;
+  const senkouBPeriod  = params.senkouBPeriod  ?? params.senkou_b_period ?? 52;
+  const displacement   = params.displacement   ?? params.ichimoku_displacement ?? 26;
+
   const out: any[] = new Array(highs.length).fill(null);
-  const senkouB = params.senkou_b_period ?? 52;
-  for (let i = senkouB; i < highs.length; i++) {
-    out[i] = calcIchimoku(highs.slice(0, i + 1), lows.slice(0, i + 1), closes.slice(0, i + 1), params);
+  const warmup = senkouBPeriod + displacement;
+  for (let i = warmup - 1; i < highs.length; i++) {
+    out[i] = calcIchimoku(
+      highs.slice(0, i + 1),
+      lows.slice(0, i + 1),
+      closes.slice(0, i + 1),
+      tenkanPeriod,
+      kijunPeriod,
+      senkouBPeriod,
+      displacement,
+    );
   }
   return out;
 }

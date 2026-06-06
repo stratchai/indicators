@@ -16,6 +16,7 @@ import {
   calcRSI,
   calcSMA,
   calcOBV,
+  calcIchimoku,
 } from "../src";
 
 const closes = [
@@ -139,5 +140,43 @@ describe("series variants — agreement with scalar latest", () => {
     const series = calcOBVSeries(closes, volumes);
     const scalar = calcOBV(closes, volumes) as { value: number };
     expect(series[series.length - 1]).toBeCloseTo(scalar.value, 6);
+  });
+
+  // v0.3.1 regression: calcIchimokuSeries was passing `params` as 4th arg
+  // to scalar calcIchimoku, which expects positional (tenkanPeriod, ...).
+  // Passing {} corrupted tenkanPeriod → idx - {} → NaN → broken output.
+  test("calcIchimokuSeries[last] matches calcIchimoku scalar exactly (v0.3.1)", () => {
+    const longHighs = Array.from({ length: 100 }, (_, i) => 100 + i + Math.sin(i * 0.3) * 5 + 0.5);
+    const longLows = Array.from({ length: 100 }, (_, i) => 100 + i + Math.sin(i * 0.3) * 5 - 0.5);
+    const longCloses = Array.from({ length: 100 }, (_, i) => 100 + i + Math.sin(i * 0.3) * 5);
+    const series = calcIchimokuSeries(longHighs, longLows, longCloses, {});
+    const scalarFromNoParams = calcIchimoku(longHighs, longLows, longCloses);
+    const scalarFromDefaults = calcIchimoku(longHighs, longLows, longCloses, 9, 26, 52, 26);
+    expect(JSON.stringify(series[series.length - 1])).toBe(JSON.stringify(scalarFromNoParams));
+    expect(JSON.stringify(series[series.length - 1])).toBe(JSON.stringify(scalarFromDefaults));
+  });
+
+  test("calcIchimokuSeries warmup boundary is senkouB + displacement (78)", () => {
+    const longHighs = Array.from({ length: 100 }, (_, i) => 100 + i);
+    const longLows = Array.from({ length: 100 }, (_, i) => 100 + i);
+    const longCloses = Array.from({ length: 100 }, (_, i) => 100 + i);
+    const series = calcIchimokuSeries(longHighs, longLows, longCloses, {});
+    expect(series[76]).toBeNull();
+    expect(series[77]).not.toBeNull();
+  });
+
+  test("calcIchimokuSeries respects custom params (camelCase + snake_case)", () => {
+    const longHighs = Array.from({ length: 80 }, (_, i) => 100 + i);
+    const longLows = Array.from({ length: 80 }, (_, i) => 100 + i);
+    const longCloses = Array.from({ length: 80 }, (_, i) => 100 + i);
+    // Shorter senkouB lets the warmup land inside the array.
+    const camelSeries = calcIchimokuSeries(longHighs, longLows, longCloses, {
+      tenkanPeriod: 7, kijunPeriod: 22, senkouBPeriod: 44, displacement: 22,
+    });
+    const snakeSeries = calcIchimokuSeries(longHighs, longLows, longCloses, {
+      tenkan_period: 7, kijun_period: 22, senkou_b_period: 44, ichimoku_displacement: 22,
+    });
+    expect(JSON.stringify(camelSeries[79])).toBe(JSON.stringify(snakeSeries[79]));
+    expect(camelSeries[79]).not.toBeNull();
   });
 });
