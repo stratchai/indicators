@@ -1,0 +1,143 @@
+// Tests for the v0.3.0 series-variant exports.
+
+import {
+  calcRSISeries,
+  calcSMASeries,
+  calcEMASeries,
+  calcMFISeries,
+  calcAroonSeries,
+  calcADXSeries,
+  calcSupertrendSeries,
+  calcIchimokuSeries,
+  calcKeltnerSeries,
+  calcOBVSeries,
+  calcBollingerBandsSeries,
+  calcMACDSeries,
+  calcRSI,
+  calcSMA,
+  calcOBV,
+} from "../src";
+
+const closes = [
+  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+  20, 19, 18, 17, 16, 15, 14, 13, 12, 11,
+  10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+  20, 21, 22, 23, 24,
+];
+const highs = closes.map(c => c + 0.5);
+const lows = closes.map(c => c - 0.5);
+const volumes = closes.map(() => 1000);
+
+describe("series variants — basic shape", () => {
+  test("calcRSISeries returns array of length closes.length with nulls before warmup", () => {
+    const series = calcRSISeries(closes, 14);
+    expect(series.length).toBe(closes.length);
+    for (let i = 0; i < 14; i++) expect(series[i]).toBeNull();
+    expect(series[14]).not.toBeNull();
+  });
+
+  test("calcSMASeries computes correct rolling SMA", () => {
+    const series = calcSMASeries(closes, 5);
+    expect(series.length).toBe(closes.length);
+    expect(series[4]).toBe((10 + 11 + 12 + 13 + 14) / 5);
+    expect(series[5]).toBe((11 + 12 + 13 + 14 + 15) / 5);
+  });
+
+  test("calcEMASeries length matches input", () => {
+    const series = calcEMASeries(closes, 10);
+    expect(series.length).toBe(closes.length);
+    for (let i = 0; i < 9; i++) expect(series[i]).toBeNull();
+    expect(series[9]).not.toBeNull();
+  });
+
+  test("calcMFISeries shape", () => {
+    const series = calcMFISeries(highs, lows, closes, volumes, 14);
+    expect(series.length).toBe(closes.length);
+    expect(series[14]).not.toBeNull();
+  });
+
+  test("calcAroonSeries returns objects with up/down/oscillator", () => {
+    const series = calcAroonSeries(highs, lows, 14);
+    expect(series.length).toBe(closes.length);
+    const last = series[series.length - 1];
+    expect(last).toHaveProperty("up");
+    expect(last).toHaveProperty("down");
+    expect(last).toHaveProperty("oscillator");
+  });
+
+  test("calcADXSeries warmup respected", () => {
+    const series = calcADXSeries(highs, lows, closes, 14);
+    expect(series.length).toBe(closes.length);
+    for (let i = 0; i < 28; i++) expect(series[i]).toBeNull();
+  });
+
+  test("calcSupertrendSeries returns bullish/bearish flags", () => {
+    const series = calcSupertrendSeries(highs, lows, closes, 10, 3);
+    expect(series.length).toBe(closes.length);
+    const valid = series.filter(s => s !== null);
+    expect(valid.length).toBeGreaterThan(0);
+    expect(valid[0]).toHaveProperty("bullish");
+    expect(valid[0]).toHaveProperty("bearish");
+  });
+
+  test("calcIchimokuSeries shape", () => {
+    const series = calcIchimokuSeries(highs, lows, closes, {});
+    expect(series.length).toBe(closes.length);
+  });
+
+  test("calcKeltnerSeries returns middle/upper/lower", () => {
+    const series = calcKeltnerSeries(highs, lows, closes, 20, 10, 2);
+    expect(series.length).toBe(closes.length);
+    const valid = series.filter(s => s !== null);
+    expect(valid.length).toBeGreaterThan(0);
+  });
+
+  test("calcOBVSeries cumulative correctly", () => {
+    const series = calcOBVSeries(closes, volumes);
+    expect(series.length).toBe(closes.length);
+    expect(series[0]).toBe(0);
+    // closes[1]=11 > closes[0]=10 → OBV +volume = +1000
+    expect(series[1]).toBe(1000);
+    expect(series[2]).toBe(2000);
+  });
+
+  test("calcBollingerBandsSeries shape", () => {
+    const series = calcBollingerBandsSeries(closes, 20, 2);
+    expect(series.length).toBe(closes.length);
+    const valid = series.filter(s => s !== null);
+    expect(valid.length).toBeGreaterThan(0);
+    expect(valid[0]).toHaveProperty("middle");
+    expect(valid[0]).toHaveProperty("upper");
+    expect(valid[0]).toHaveProperty("lower");
+  });
+
+  test("calcMACDSeries shape", () => {
+    const longerCloses = Array.from({ length: 100 }, (_, i) => 100 + i + Math.sin(i * 0.2) * 5);
+    const series = calcMACDSeries(longerCloses, 12, 26, 9);
+    expect(series.length).toBe(longerCloses.length);
+    const valid = series.filter(s => s !== null);
+    expect(valid.length).toBeGreaterThan(0);
+  });
+});
+
+describe("series variants — agreement with scalar latest", () => {
+  test("calcRSISeries[i] === calcRSI(closes.slice(0, i+1))", () => {
+    const series = calcRSISeries(closes, 14);
+    for (let i = 14; i < closes.length; i++) {
+      expect(series[i]).toBeCloseTo(calcRSI(closes.slice(0, i + 1), 14)!, 6);
+    }
+  });
+
+  test("calcSMASeries[i] === calcSMA(closes.slice(0, i+1))", () => {
+    const series = calcSMASeries(closes, 5);
+    for (let i = 4; i < closes.length; i++) {
+      expect(series[i]).toBeCloseTo(calcSMA(closes.slice(0, i + 1), 5)!, 6);
+    }
+  });
+
+  test("calcOBVSeries last value === calcOBV(closes, volumes).value", () => {
+    const series = calcOBVSeries(closes, volumes);
+    const scalar = calcOBV(closes, volumes) as { value: number };
+    expect(series[series.length - 1]).toBeCloseTo(scalar.value, 6);
+  });
+});

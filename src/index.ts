@@ -1766,6 +1766,143 @@ function calcAscendingTriangle(highs: number[], lows: number[], closes: number[]
 }
 //#endregion
 
+//#region ---------- Series variants ----------
+//
+// v0.3.0: Series variants for backtest scripts.
+//
+// The existing calc* functions return scalar latest values (designed for live
+// agents that call once per bar with trailing data). Backtest scripts need
+// per-bar values across the full series. These wrappers walk the input arrays
+// and call the scalar function at each bar with a trailing prefix.
+//
+// Implementation note: this is naive O(n²) — each call materializes a
+// slice and re-computes the indicator over the prefix. For the SMA/EMA/RSI
+// family this is wasteful; a future v0.4.0 should provide native O(n)
+// implementations. For now, correctness over performance.
+//
+// All Series variants return an array of length closes.length. Indices
+// before the indicator's warmup period contain null.
+
+function calcRSISeries(closes: number[], period: number = 14): (number | null)[] {
+  const out: (number | null)[] = new Array(closes.length).fill(null);
+  for (let i = period; i < closes.length; i++) {
+    out[i] = calcRSI(closes.slice(0, i + 1), period);
+  }
+  return out;
+}
+
+function calcSMASeries(values: number[], period: number): (number | null)[] {
+  const out: (number | null)[] = new Array(values.length).fill(null);
+  if (values.length < period) return out;
+  let windowSum = 0;
+  for (let i = 0; i < period; i++) windowSum += values[i];
+  out[period - 1] = windowSum / period;
+  for (let i = period; i < values.length; i++) {
+    windowSum += values[i] - values[i - period];
+    out[i] = windowSum / period;
+  }
+  return out;
+}
+
+function calcEMASeries(prices: number[], period: number): (number | null)[] {
+  const out: (number | null)[] = new Array(prices.length).fill(null);
+  if (prices.length < period) return out;
+  const k = 2 / (period + 1);
+  let ema = prices.slice(0, period).reduce((s, p) => s + p, 0) / period;
+  out[period - 1] = ema;
+  for (let i = period; i < prices.length; i++) {
+    ema = prices[i] * k + ema * (1 - k);
+    out[i] = ema;
+  }
+  return out;
+}
+
+function calcMFISeries(highs: number[], lows: number[], closes: number[], volumes: number[], period: number = 14): (any)[] {
+  const out: any[] = new Array(closes.length).fill(null);
+  for (let i = period; i < closes.length; i++) {
+    out[i] = calcMFI(
+      highs.slice(0, i + 1),
+      lows.slice(0, i + 1),
+      closes.slice(0, i + 1),
+      volumes.slice(0, i + 1),
+      period,
+    );
+  }
+  return out;
+}
+
+function calcAroonSeries(highs: number[], lows: number[], period: number = 25): (any)[] {
+  const out: any[] = new Array(highs.length).fill(null);
+  for (let i = period; i < highs.length; i++) {
+    out[i] = calcAroon(highs.slice(0, i + 1), lows.slice(0, i + 1), period);
+  }
+  return out;
+}
+
+function calcADXSeries(highs: number[], lows: number[], closes: number[], period: number = 14): (any)[] {
+  const out: any[] = new Array(highs.length).fill(null);
+  for (let i = period * 2; i < highs.length; i++) {
+    out[i] = calcADX(highs.slice(0, i + 1), lows.slice(0, i + 1), closes.slice(0, i + 1), period);
+  }
+  return out;
+}
+
+function calcSupertrendSeries(highs: number[], lows: number[], closes: number[], period: number = 10, mult: number = 3): (any)[] {
+  const out: any[] = new Array(highs.length).fill(null);
+  for (let i = period; i < highs.length; i++) {
+    out[i] = calcSupertrend(highs.slice(0, i + 1), lows.slice(0, i + 1), closes.slice(0, i + 1), period, mult);
+  }
+  return out;
+}
+
+function calcIchimokuSeries(highs: number[], lows: number[], closes: number[], params: any = {}): (any)[] {
+  const out: any[] = new Array(highs.length).fill(null);
+  const senkouB = params.senkou_b_period ?? 52;
+  for (let i = senkouB; i < highs.length; i++) {
+    out[i] = calcIchimoku(highs.slice(0, i + 1), lows.slice(0, i + 1), closes.slice(0, i + 1), params);
+  }
+  return out;
+}
+
+function calcKeltnerSeries(highs: number[], lows: number[], closes: number[], emaPeriod: number = 20, atrPeriod: number = 10, mult: number = 2): (any)[] {
+  const out: any[] = new Array(highs.length).fill(null);
+  const start = Math.max(emaPeriod, atrPeriod);
+  for (let i = start; i < highs.length; i++) {
+    out[i] = calcKeltner(highs.slice(0, i + 1), lows.slice(0, i + 1), closes.slice(0, i + 1), emaPeriod, atrPeriod, mult);
+  }
+  return out;
+}
+
+function calcOBVSeries(closes: number[], volumes: number[]): (number)[] {
+  // OBV is naturally cumulative — compute series in O(n).
+  const out: number[] = new Array(closes.length).fill(0);
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i] > closes[i - 1]) out[i] = out[i - 1] + volumes[i];
+    else if (closes[i] < closes[i - 1]) out[i] = out[i - 1] - volumes[i];
+    else out[i] = out[i - 1];
+  }
+  return out;
+}
+
+function calcBollingerBandsSeries(prices: number[], period: number = 20, mult: number = 2): (any)[] {
+  const out: any[] = new Array(prices.length).fill(null);
+  for (let i = period; i < prices.length; i++) {
+    out[i] = calcBollingerBands(prices.slice(0, i + 1), period, mult);
+  }
+  return out;
+}
+
+function calcMACDSeries(prices: number[], fast: number = 12, slow: number = 26, signal: number = 9): (any)[] {
+  const out: any[] = new Array(prices.length).fill(null);
+  const start = slow + signal;
+  for (let i = start; i < prices.length; i++) {
+    out[i] = calcMACD(prices.slice(0, i + 1), fast, slow, signal);
+  }
+  return out;
+}
+
+//#endregion
+
 export {
   calcVolIndex,
   calcBollingerBands,
@@ -1804,4 +1941,17 @@ export {
   calcFibonacci,
   calcIchimoku,
   calcAscendingTriangle,
+  // v0.3.0 series variants for backtest scripts
+  calcRSISeries,
+  calcSMASeries,
+  calcEMASeries,
+  calcMFISeries,
+  calcAroonSeries,
+  calcADXSeries,
+  calcSupertrendSeries,
+  calcIchimokuSeries,
+  calcKeltnerSeries,
+  calcOBVSeries,
+  calcBollingerBandsSeries,
+  calcMACDSeries,
 };
