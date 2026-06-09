@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0] — 2026-06-09 (five additional Series variants)
+
+### Added
+
+- **`calcCMFSeries(highs, lows, closes, volumes, period?)`** — series variant of Chaikin Money Flow.
+- **`calcStochasticSeries(highs, lows, closes, period?)`** — series of Stochastic %K values.
+- **`calcMassIndexSeries(highs, lows, period?, sumPeriod?, bulgeLookback?)`** — series of Mass Index `{ value, bulge }` objects.
+- **`calcHammerSeries(opens, highs, lows, closes, params?)`** — series of Hammer detection results (one per bar).
+- **`calcDonchianSeries(highs, lows, closes, period?)`** — series of Donchian channel `{ upper, middle, lower, priceAbove, priceBelow }` objects.
+
+All five follow the standard scalar-via-slice pattern. Each returns an array with `null` entries before the indicator's warmup window. Triggered by sigma's walk-forward script migrations (sigma#41) — the inline implementations in donchian, multi_archetype, and meanrev_archetype scripts can now drop their last ~80 lines of duplicated math.
+
+5 new unit tests in `series.test.ts` (205 total, all passing).
+
+No breaking changes. All prior exports preserved.
+
+---
+
 ## [0.2.1] — 2026-06-02 (README — drop links to private framework)
 
 ### Fixed

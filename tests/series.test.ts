@@ -13,10 +13,21 @@ import {
   calcOBVSeries,
   calcBollingerBandsSeries,
   calcMACDSeries,
+  // v0.4.0
+  calcCMFSeries,
+  calcStochasticSeries,
+  calcMassIndexSeries,
+  calcHammerSeries,
+  calcDonchianSeries,
   calcRSI,
   calcSMA,
   calcOBV,
   calcIchimoku,
+  calcCMF,
+  calcStochastic,
+  calcMassIndex,
+  calcHammer,
+  calcDonchian,
 } from "../src";
 
 const closes = [
@@ -178,5 +189,62 @@ describe("series variants — agreement with scalar latest", () => {
     });
     expect(JSON.stringify(camelSeries[79])).toBe(JSON.stringify(snakeSeries[79]));
     expect(camelSeries[79]).not.toBeNull();
+  });
+});
+
+describe("v0.4.0 series variants", () => {
+  test("calcCMFSeries returns null pre-warmup and matches scalar at the last index", () => {
+    const series = calcCMFSeries(highs, lows, closes, volumes, 20);
+    expect(series.length).toBe(closes.length);
+    for (let i = 0; i < 19; i++) expect(series[i]).toBeNull();
+    expect(series[19]).not.toBeNull();
+    expect(JSON.stringify(series[series.length - 1])).toBe(
+      JSON.stringify(calcCMF(highs, lows, closes, volumes, 20)),
+    );
+  });
+
+  test("calcStochasticSeries returns array indexable by bar position", () => {
+    const series = calcStochasticSeries(highs, lows, closes, 14);
+    expect(series.length).toBe(closes.length);
+    for (let i = 0; i < 13; i++) expect(series[i]).toBeNull();
+    expect(series[13]).not.toBeNull();
+    expect(series[series.length - 1]).toBe(calcStochastic(highs, lows, closes, 14));
+  });
+
+  test("calcMassIndexSeries respects period*2 + sumPeriod warmup", () => {
+    const longHighs = Array.from({ length: 80 }, (_, i) => 100 + i + Math.sin(i) * 5);
+    const longLows  = longHighs.map(h => h - 1);
+    const series = calcMassIndexSeries(longHighs, longLows, 9, 25, 10);
+    expect(series.length).toBe(80);
+    // period*2 + sumPeriod = 43, so index 42 is the first non-null
+    expect(series[41]).toBeNull();
+    expect(series[42]).not.toBeNull();
+    expect(JSON.stringify(series[series.length - 1])).toBe(
+      JSON.stringify(calcMassIndex(longHighs, longLows, 9, 25, 10)),
+    );
+  });
+
+  test("calcHammerSeries returns one detection result per bar", () => {
+    // Construct a clear hammer at index 5: long lower wick, small body at top
+    const opens  = [100, 100, 100, 100, 100, 100, 100];
+    const highsH = [101, 101, 101, 101, 101, 101, 101];
+    const lowsH  = [99,  99,  99,  99,  99,  90,  99];
+    const closesH = [100, 100, 100, 100, 100, 100, 100];
+    const series = calcHammerSeries(opens, highsH, lowsH, closesH);
+    expect(series.length).toBe(7);
+    expect(series[5].isHammer).toBe(true);
+    expect(series[0].isHammer).toBe(false);
+  });
+
+  test("calcDonchianSeries returns null pre-warmup and a full channel object after", () => {
+    const series = calcDonchianSeries(highs, lows, closes, 20);
+    expect(series.length).toBe(closes.length);
+    expect(series[19]).toBeNull();
+    expect(series[20]).not.toBeNull();
+    expect(typeof series[20].upper).toBe("number");
+    expect(typeof series[20].lower).toBe("number");
+    expect(JSON.stringify(series[series.length - 1])).toBe(
+      JSON.stringify(calcDonchian(highs, lows, closes, 20)),
+    );
   });
 });

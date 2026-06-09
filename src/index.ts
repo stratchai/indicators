@@ -1924,6 +1924,85 @@ function calcMACDSeries(prices: number[], fast: number = 12, slow: number = 26, 
   return out;
 }
 
+// v0.4.0 — five additional Series variants requested by sigma's walk-forward
+// migrations (sigma#41 closeout). All follow the standard scalar-via-slice
+// pattern; consumers index by bar position. Earlier indices fill with null
+// where the scalar requires more history than the slice provides.
+
+function calcCMFSeries(highs: number[], lows: number[], closes: number[], volumes: number[], period: number = 20): (any)[] {
+  const out: any[] = new Array(closes.length).fill(null);
+  for (let i = period - 1; i < closes.length; i++) {
+    out[i] = calcCMF(
+      highs.slice(0, i + 1),
+      lows.slice(0, i + 1),
+      closes.slice(0, i + 1),
+      volumes.slice(0, i + 1),
+      period,
+    );
+  }
+  return out;
+}
+
+function calcStochasticSeries(highs: number[], lows: number[], closes: number[], period: number = 14): (number | null)[] {
+  const out: (number | null)[] = new Array(closes.length).fill(null);
+  for (let i = period - 1; i < closes.length; i++) {
+    const v = calcStochastic(
+      highs.slice(0, i + 1),
+      lows.slice(0, i + 1),
+      closes.slice(0, i + 1),
+      period,
+    );
+    out[i] = v as number | null;
+  }
+  return out;
+}
+
+function calcMassIndexSeries(highs: number[], lows: number[], period: number = 9, sumPeriod: number = 25, bulgeLookback: number = 10): (any)[] {
+  const out: any[] = new Array(highs.length).fill(null);
+  // calcMassIndex requires at least period*2 + sumPeriod bars
+  const start = period * 2 + sumPeriod;
+  for (let i = start - 1; i < highs.length; i++) {
+    out[i] = calcMassIndex(
+      highs.slice(0, i + 1),
+      lows.slice(0, i + 1),
+      period,
+      sumPeriod,
+      bulgeLookback,
+    );
+  }
+  return out;
+}
+
+function calcHammerSeries(opens: number[], highs: number[], lows: number[], closes: number[], params: Record<string, any> = {}): (any)[] {
+  // Hammer is a single-bar pattern — no historical window beyond the current
+  // bar. Loop the full series and run the scalar on a 1-bar slice per index.
+  const out: any[] = new Array(closes.length).fill(null);
+  for (let i = 0; i < closes.length; i++) {
+    out[i] = calcHammer(
+      opens.slice(0, i + 1),
+      highs.slice(0, i + 1),
+      lows.slice(0, i + 1),
+      closes.slice(0, i + 1),
+      params,
+    );
+  }
+  return out;
+}
+
+function calcDonchianSeries(highs: number[], lows: number[], closes: number[], period: number = 20): (any)[] {
+  const out: any[] = new Array(closes.length).fill(null);
+  // calcDonchian needs period + 1 bars (period prior + current)
+  for (let i = period; i < closes.length; i++) {
+    out[i] = calcDonchian(
+      highs.slice(0, i + 1),
+      lows.slice(0, i + 1),
+      closes.slice(0, i + 1),
+      period,
+    );
+  }
+  return out;
+}
+
 //#endregion
 
 export {
@@ -1977,4 +2056,10 @@ export {
   calcOBVSeries,
   calcBollingerBandsSeries,
   calcMACDSeries,
+  // v0.4.0 series variants (sigma#41 closeout)
+  calcCMFSeries,
+  calcStochasticSeries,
+  calcMassIndexSeries,
+  calcHammerSeries,
+  calcDonchianSeries,
 };
