@@ -219,6 +219,8 @@ function calcTrendStructure(closes: number[], highs: number[], lows: number[], p
       lastHigherLow: false,
       brokeHigherLow: false,
       priceAboveMa,
+      lastHigherHighPrice: null,
+      lastHigherLowPrice: null,
     };
   }
 
@@ -244,6 +246,8 @@ function calcTrendStructure(closes: number[], highs: number[], lows: number[], p
     lastHigherLow,
     brokeHigherLow,
     priceAboveMa,
+    lastHigherHighPrice: H1.price,
+    lastHigherLowPrice: L1.price,
   };
 }
 
