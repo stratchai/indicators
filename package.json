@@ -1,6 +1,6 @@
 {
   "name": "@stratchai/indicators",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Technical indicators for systematic trading — 37 scalar-latest functions + 12 series variants for backtesting. Zero dependencies, pure functions.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
