@@ -2009,6 +2009,83 @@ function calcDonchianSeries(highs: number[], lows: number[], closes: number[], p
 
 //#endregion
 
+//#region ---------- SUPPORT / RESISTANCE (swing pivots) ----------
+// Swing-based support & resistance. Unlike the formulaic levels in
+// calcPivotPoints / calcFibonacci, this finds where price ACTUALLY reacted:
+// locate fractal swing highs/lows over a lookback, cluster nearby pivots into
+// price zones (weighted by how many times price touched them), then classify
+// each zone vs the current price — below = support, above = resistance. Returns
+// the nearest level on each side (for stop/target placement) plus the full
+// ladder with touch counts and distance %. Returns null on insufficient data.
+function calcSupportResistance(
+  highs: number[],
+  lows: number[],
+  closes: number[],
+  opts: { lookback?: number; pivotWindow?: number; clusterPct?: number; maxLevels?: number } = {}
+) {
+  const { lookback = 120, pivotWindow = 3, clusterPct = 1.0, maxLevels = 5 } = opts;
+  if (!highs || !lows || !closes) return null;
+  const n = closes.length;
+  if (n < pivotWindow * 2 + 1) return null;
+
+  const from  = Math.max(0, n - lookback);
+  const H     = highs.slice(from);
+  const L     = lows.slice(from);
+  const price = closes[n - 1];
+  const w     = pivotWindow;
+
+  // Fractal pivots: swing high = local max over ±w bars, swing low = local min.
+  // Both feed the level set — S/R roles flip once price crosses a level.
+  const pivots: { price: number; bar: number }[] = [];
+  for (let i = w; i < H.length - w; i++) {
+    let isHigh = true, isLow = true;
+    for (let j = i - w; j <= i + w; j++) {
+      if (H[j] > H[i]) isHigh = false;
+      if (L[j] < L[i]) isLow  = false;
+    }
+    if (isHigh) pivots.push({ price: H[i], bar: i });
+    if (isLow)  pivots.push({ price: L[i], bar: i });
+  }
+  if (pivots.length === 0) {
+    return { price, supports: [], resistances: [], nearestSupport: null, nearestResistance: null };
+  }
+
+  // Cluster pivots within clusterPct into zones (touch-weighted average price).
+  pivots.sort((a, b) => a.price - b.price);
+  const zones: { price: number; touches: number; lastBar: number }[] = [];
+  for (const p of pivots) {
+    const z = zones[zones.length - 1];
+    if (z && ((p.price - z.price) / z.price) * 100 <= clusterPct) {
+      z.price   = (z.price * z.touches + p.price) / (z.touches + 1);
+      z.touches += 1;
+      z.lastBar = Math.max(z.lastBar, p.bar);
+    } else {
+      zones.push({ price: p.price, touches: 1, lastBar: p.bar });
+    }
+  }
+
+  const distPct = (level: number) => Math.round((Math.abs(level - price) / price) * 10000) / 100;
+  const supports = zones
+    .filter(z => z.price < price)
+    .sort((a, b) => b.price - a.price)          // nearest (highest) support first
+    .slice(0, maxLevels)
+    .map(z => ({ price: z.price, touches: z.touches, distPct: distPct(z.price) }));
+  const resistances = zones
+    .filter(z => z.price > price)
+    .sort((a, b) => a.price - b.price)          // nearest (lowest) resistance first
+    .slice(0, maxLevels)
+    .map(z => ({ price: z.price, touches: z.touches, distPct: distPct(z.price) }));
+
+  return {
+    price,
+    supports,
+    resistances,
+    nearestSupport:    supports[0]?.price    ?? null,
+    nearestResistance: resistances[0]?.price ?? null,
+  };
+}
+//#endregion
+
 export {
   calcVolIndex,
   calcBollingerBands,
@@ -2045,6 +2122,7 @@ export {
   calc52WeekHighLow,
   calcPivotPoints,
   calcFibonacci,
+  calcSupportResistance,
   calcIchimoku,
   calcAscendingTriangle,
   // v0.3.0 series variants for backtest scripts

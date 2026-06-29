@@ -27,6 +27,7 @@ const {
   calc52WeekHighLow,
   calcPivotPoints,
   calcFibonacci,
+  calcSupportResistance,
   calcIchimoku,
   calcAscendingTriangle,
 } = require("../src");
@@ -1524,5 +1525,48 @@ describe("calcAscendingTriangle", () => {
     for (let i = 0; i < lows.length - 1; i++) lows[i] = 100;
     const r = calcAscendingTriangle(highs, lows, closes, volumes, { min_higher_lows: 5 });
     expect(r.isAscendingTriangle).toBe(false);
+  });
+});
+
+describe("calcSupportResistance", () => {
+  // Build a zigzag whose turning points land at known levels, so swing pivots
+  // (and thus S/R zones) are predictable. Lows ~100 (support), highs ~110
+  // (resistance), current price ~105 between them.
+  function zigzag(levels, barsPerLeg) {
+    const closes = [];
+    for (let k = 0; k < levels.length - 1; k++) {
+      const a = levels[k], b = levels[k + 1];
+      for (let i = 0; i < barsPerLeg; i++) closes.push(a + (b - a) * (i / barsPerLeg));
+    }
+    closes.push(levels[levels.length - 1]);
+    const highs = closes.map((c) => c + 0.5);
+    const lows  = closes.map((c) => c - 0.5);
+    return { highs, lows, closes };
+  }
+
+  test("returns null on insufficient / missing data", () => {
+    expect(calcSupportResistance(null, null, null)).toBeNull();
+    expect(calcSupportResistance([1, 2], [1, 2], [1, 2], { pivotWindow: 3 })).toBeNull();
+  });
+
+  test("finds support below and resistance above the current price", () => {
+    const { highs, lows, closes } = zigzag([105, 100, 110, 100, 110, 100, 110, 105], 6);
+    const sr = calcSupportResistance(highs, lows, closes, { pivotWindow: 3, clusterPct: 2, lookback: 300 });
+    expect(sr).not.toBeNull();
+    expect(sr.supports.length).toBeGreaterThan(0);
+    expect(sr.resistances.length).toBeGreaterThan(0);
+    // nearest resistance is the ~110 zone (above price ~105), support the ~100 zone
+    expect(sr.nearestResistance).toBeGreaterThan(sr.price);
+    expect(sr.nearestResistance).toBeLessThanOrEqual(111);
+    expect(sr.nearestSupport).toBeLessThan(sr.price);
+    expect(sr.nearestSupport).toBeGreaterThanOrEqual(99);
+  });
+
+  test("clusters repeated touches into one zone with a touch count", () => {
+    const { highs, lows, closes } = zigzag([105, 100, 110, 100, 110, 100, 110, 105], 6);
+    const sr = calcSupportResistance(highs, lows, closes, { pivotWindow: 3, clusterPct: 2, lookback: 300 });
+    // the 110 resistance is tested 3x → its nearest-resistance zone has >1 touch
+    expect(sr.resistances[0].touches).toBeGreaterThanOrEqual(2);
+    expect(sr.resistances[0].distPct).toBeGreaterThan(0);
   });
 });
