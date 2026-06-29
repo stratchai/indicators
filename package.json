@@ -14,7 +14,8 @@
     "build": "tsc",
     "prepublishOnly": "npm run build && npm test",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "sr": "node scripts/sr.js"
   },
   "jest": {
     "preset": "ts-jest",
